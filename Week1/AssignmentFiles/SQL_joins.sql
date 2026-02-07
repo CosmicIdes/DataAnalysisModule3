@@ -5,6 +5,10 @@ USE coffeeshop_db;
 -- =========================================================
 
 -- Q1) Join products to categories: list product_name, category_name, price.
+SELECT p.name AS product_name, c.name AS category_name, p.price
+FROM products AS p
+INNER JOIN categories AS c
+ON p.category_id = c.category_id;
 
 -- Q2) For each order item, show: order_id, order_datetime, store_name,
 --     product_name, quantity, line_total (= quantity * products.price).
