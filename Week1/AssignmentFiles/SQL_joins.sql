@@ -75,16 +75,39 @@ ORDER BY store_name;
 
 -- Q6) Inventory check: show rows where on_hand < 12 in any store.
 --     Return store_name, product_name, on_hand.
+SELECT s.name AS store_name, p.name AS product_name, i.on_hand
+FROM inventory AS i
+INNER JOIN stores AS s ON i.store_id = s.store_id
+INNER JOIN products AS p ON i.product_id = p.product_id
+WHERE on_hand < 12;
 
 -- Q7) Manager roster: list each store's manager_name and hire_date.
 --     (Assume title = 'Manager').
+SELECT s.name AS store_name, CONCAT(e.first_name, ' ', e.last_name) AS manager_name, e.hire_date
+FROM employees AS e
+INNER JOIN stores AS s ON e.store_id = s.store_id
+WHERE title = 'manager';
 
 -- Q8) Using a subquery/CTE: list products whose total PAID revenue is above
 --     the average PAID product revenue. Return product_name, total_revenue.
+WITH revenue AS (
+	SELECT p.name AS product_name, AVG(p.price * oi.quantity) AS total_revenue
+    FROM products AS p
+    INNER JOIN order_items AS oi ON p.product_id = oi.product_id
+    INNER JOIN orders AS o ON oi.order_id = o.order_id
+    WHERE o.status = 'paid'
+    GROUP BY product_name
+    )
+SELECT *
+FROM revenue
+WHERE total_revenue > (SELECT AVG(total_revenue) FROM revenue)
+ORDER BY total_revenue DESC;
 
 -- Q9) Churn-ish check: list customers with their last PAID order date.
 --     If they have no PAID orders, show NULL.
 --     Hint: Put the status filter in the LEFT JOIN's ON clause to preserve non-buyer rows.
+
+
 
 -- Q10) Product mix report (PAID only):
 --     For each store and category, show total units and total revenue (= SUM(quantity * products.price)).
