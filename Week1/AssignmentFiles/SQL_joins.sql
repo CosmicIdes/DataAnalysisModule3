@@ -49,29 +49,29 @@ WHERE o.order_id IS NULL;
 -- Q5) For each store, list the top-selling product by units (PAID only).
 --     Return store_name, product_name, total_units.
 --     Hint: Use a window function (ROW_NUMBER PARTITION BY store) or a correlated subquery.
--- ASK IN CLASS
-WITH ranked_sales AS(
+WITH product_sales AS(
 	SELECT 
 		s.name AS store_name, 
-		SUM(oi.quantity) AS total_units,
-		RANK() OVER (
-			PARTITION BY s.name
-			ORDER BY SUM(oi.quantity) DESC
-			) AS ranked
-	FROM stores as S
+        p.name AS product_name,
+		SUM(oi.quantity) AS total_units
+	FROM stores AS S
 	INNER JOIN orders AS o ON s.store_id = o.store_id
 	INNER JOIN order_items AS oi ON o.order_id = oi.order_id
 	INNER JOIN products AS p ON oi.product_id = p.product_id
 	WHERE o.status = 'paid'
-	GROUP BY s.name
-)
+	GROUP BY store_name, product_name
+), ranked_sales AS(
+	SELECT store_name, product_name, total_units, ROW_NUMBER() OVER(
+		PARTITION BY store_name
+        ORDER BY total_units DESC) AS ranked
+	FROM product_sales
+    )
 SELECT 
 	store_name,
-    p.name AS product_name,
+    product_name,
     total_units
-FROM ranked_sales, products AS p
-WHERE ranked = 1
-ORDER BY store_name;
+FROM ranked_sales
+WHERE ranked = 1;
 
 -- Q6) Inventory check: show rows where on_hand < 12 in any store.
 --     Return store_name, product_name, on_hand.
@@ -106,8 +106,18 @@ ORDER BY total_revenue DESC;
 -- Q9) Churn-ish check: list customers with their last PAID order date.
 --     If they have no PAID orders, show NULL.
 --     Hint: Put the status filter in the LEFT JOIN's ON clause to preserve non-buyer rows.
-
-
+SELECT c.customer_id, CONCAT(c.first_name, ' ', c.last_name) AS customer_name, MAX(DATE(o.order_datetime)) AS last_paid_date
+FROM customers AS c
+LEFT JOIN orders AS o ON c.customer_id = o.customer_id AND o.status = 'paid'
+GROUP BY c.customer_id, customer_name;
 
 -- Q10) Product mix report (PAID only):
 --     For each store and category, show total units and total revenue (= SUM(quantity * products.price)).
+SELECT s.name AS store_name, ca.category_id, ca.name AS category_name, SUM(oi.quantity) AS total_units, SUM(oi.quantity * p.price) AS total_revenue
+FROM categories AS ca
+INNER JOIN products AS p ON ca.category_id = p.category_id
+INNER JOIN order_items AS oi ON p.product_id = oi.product_id
+INNER JOIN orders AS o ON oi.order_id = o.order_id
+INNER JOIN stores AS s ON o.store_id = s.store_id
+WHERE o.status = 'paid'
+GROUP BY store_name, category_name;
